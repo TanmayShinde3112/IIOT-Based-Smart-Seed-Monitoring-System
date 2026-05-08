@@ -61,6 +61,9 @@ class SeedPredictionResponse(BaseModel):
     confidence: float
     raw_class: str
     recommendation: str
+    record_id: int | None = None
+    image_name: str | None = None
     image_url: str | None = None
+    created_at: str | None = None
     germination_change: float | None = None
     change_reason: str | None = None

@@ -146,24 +146,16 @@ class SeedInferenceService:
     def predict(self, image_bytes: bytes) -> dict:
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
-        # First, validate that the image contains seeds
+        # Measure whether a seed-like object is present, but do not hard reject
+        # valid manual uploads if the detector is uncertain.
         has_seeds, detection_conf = self._detect_seeds(image)
         if not has_seeds:
-            return {
-                "error": "No valid seed detected in image. Please upload an image containing seeds.",
-                "germination_probability": 0.0,
-                "quality_label": "Invalid",
-                "confidence": 0.0,
-                "raw_class": "Unknown",
-                "recommendation": "Upload a clear image of seeds for analysis.",
-                "model_loaded": self.yolo_model is not None,
-                "seed_detection_confidence": detection_conf,
-            }
+            print(f"Warning: Low seed detection confidence ({detection_conf:.3f}); continuing with image-based prediction.")
 
-        # Proceed with quality prediction
         if self.pipeline is None:
             result = self._fallback_prediction(image)
             result["seed_detection_confidence"] = detection_conf
+            result["seed_detection_warning"] = not has_seeds
             return result
 
         feats = self._extract_features(image).reshape(1, -1)
@@ -190,6 +182,7 @@ class SeedInferenceService:
             "model_loaded": True,
             "model_path": str(self.calibrated_model_path),
             "seed_detection_confidence": detection_conf,
+            "seed_detection_warning": not has_seeds,
         }
 
 

@@ -25,18 +25,21 @@ Write-Host "Press Ctrl+C in this terminal to stop both services."
 $backendJob = Start-Job -Name "seed-iq-backend" -ScriptBlock {
   param($backendPath, $pythonPath)
   Set-Location $backendPath
-  & $pythonPath -m uvicorn app.main:app --reload --port 8000 --app-dir $backendPath
+  & $pythonPath -m uvicorn app.main:app --reload --port 8000 --app-dir $backendPath 2>&1
 } -ArgumentList $backend, $python
 
 $frontendJob = Start-Job -Name "seed-iq-frontend" -ScriptBlock {
   param($frontendPath)
   Set-Location $frontendPath
-  npm run dev -- --host 127.0.0.1
+  npm run dev -- --host 127.0.0.1 2>&1
 } -ArgumentList $frontend
 
 try {
   while ($true) {
-    Receive-Job $backendJob, $frontendJob
+    $jobOutput = Receive-Job -Job $backendJob, $frontendJob -ErrorAction SilentlyContinue
+    if ($jobOutput) {
+      $jobOutput | ForEach-Object { Write-Host $_ }
+    }
     Start-Sleep -Seconds 1
   }
 } finally {

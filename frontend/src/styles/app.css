@@ -1208,11 +1208,42 @@ button.metric-card {
 
 .row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 2fr 0.5fr;
+  grid-template-columns: 0.9fr 2fr 1fr 1fr 2fr 0.5fr;
   gap: 8px;
   font-size: 0.9rem;
   align-items: center;
-  min-width: 700px;
+  min-width: 860px;
+}
+
+.history-thumb-cell {
+  display: flex;
+  align-items: center;
+}
+
+.history-thumb {
+  width: 54px;
+  height: 54px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #d7e5dd;
+  background: #f8fbfd;
+  display: block;
+}
+
+.history-thumb.placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 6px;
+  text-align: center;
+}
+
+.history-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .delete-btn,

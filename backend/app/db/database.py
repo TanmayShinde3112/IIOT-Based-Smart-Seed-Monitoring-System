@@ -40,6 +40,7 @@ def init_db() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL,
                 image_name TEXT NOT NULL,
+                image_path TEXT,
                 germination_probability REAL NOT NULL,
                 quality_label TEXT NOT NULL,
                 confidence REAL NOT NULL,
@@ -48,6 +49,13 @@ def init_db() -> None:
             )
             """
         )
+
+        existing_columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(seed_predictions)").fetchall()
+        }
+        if "image_path" not in existing_columns:
+            conn.execute("ALTER TABLE seed_predictions ADD COLUMN image_path TEXT")
+
         conn.commit()
 
 

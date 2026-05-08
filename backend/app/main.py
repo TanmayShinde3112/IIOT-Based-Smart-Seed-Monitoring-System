@@ -52,7 +52,7 @@ app.include_router(seed_router)
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "seed-ai-platform"}
+    return {"status": "ok", "service": "iiot-based-smart-seed-monitoring-system"}
 
 
 @app.get("/")

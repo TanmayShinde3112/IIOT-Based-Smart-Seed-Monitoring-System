@@ -1,6 +1,6 @@
-# Setup Guide - Seed AI Platform
+# Setup Guide - IIOT-Based-Smart-Seed-Monitoring-System
 
-Complete installation and setup instructions for the Seed AI Platform.
+Complete installation and setup instructions for the IIOT-Based-Smart-Seed-Monitoring-System.
 
 ## Prerequisites
 
@@ -13,8 +13,8 @@ Complete installation and setup instructions for the Seed AI Platform.
 
 ```powershell
 # 1. Clone the repository
-git clone https://github.com/your-username/seed-ai-platform.git
-cd seed-ai-platform
+git clone <your-repository-url>
+cd IIOT-Based-Smart-Seed-Monitoring-System
 
 # 2. Create and activate virtual environment
 python -m venv .venv
@@ -124,9 +124,9 @@ Output will be in `frontend/dist/`
 
 The project expects the following pre-trained models:
 
-1. **Seed Defect Classifier** (`ML work/defect_classifier.pth`)
-   - PyTorch model for seed defect classification
-   - Used in Chamber 2 for seed quality analysis
+1. **Seed Quality Classifier** (`ML work/defect_classifier.pth`)
+   - PyTorch model for seed image classification
+   - Used in the Seed tab for quality analysis
 
 2. **Calibrated Quality Predictor** (`backend/artifacts/seed_quality_calibrated.joblib`)
    - Scikit-learn model for germination probability
@@ -160,25 +160,32 @@ See the [ML Training Guide](../ML%20work/ML_TRAINING_GUIDE.md) for instructions 
 1. Install Arduino IDE or VS Code with Arduino extension
 2. Open `esp32/esp32_seed_chamber_http_post.ino`
 3. Configure Wi-Fi SSID and password in the sketch
-4. Set the API endpoint URL
-5. Upload to ESP32 board
+4. Set the backend IP in `SENSOR_URL` and `SEED_CAPTURE_URL`
+5. Upload to the ESP32-CAM board
 
 ### Data Transmission
 
 The ESP32 sends sensor readings via HTTP POST to:
 ```
-POST http://[backend-host]:8000/api/sensors/readings
+POST http://[backend-host]:8000/api/sensors/ingest
 ```
 
 Payload format:
 ```json
 {
-  "temperature": 25.5,
-  "humidity": 65.0,
-  "soil_moisture": 45.0,
-  "device_id": "esp32_001"
+   "device_id": "esp32_001",
+   "temperature": 25.5,
+   "humidity": 65.0,
+   "moisture": 45.0
 }
 ```
+
+The ESP32-CAM posts a captured JPEG to:
+```
+POST http://[backend-host]:8000/api/seeds/capture?device_id=esp32-cam-1&filename=esp32-cam-1.jpg
+```
+
+Captured images are displayed in the Seed tab preview, the latest prediction card, and the prediction history thumbnails.
 
 ## Database
 
@@ -192,7 +199,6 @@ The database is created automatically on first run with the following tables:
 - **users** - User accounts and authentication
 - **sensor_readings** - Historical sensor data
 - **seed_predictions** - Seed quality predictions and history
-- **alerts** - System alerts and notifications
 
 ### Resetting the Database
 

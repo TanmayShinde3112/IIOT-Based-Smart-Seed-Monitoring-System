@@ -1,4 +1,4 @@
-# Contributing to Seed AI Platform
+# Contributing to IIOT-Based-Smart-Seed-Monitoring-System
 
 Thank you for your interest in contributing! This document provides guidelines and instructions.
 
@@ -7,7 +7,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 1. **Fork the repository** on GitHub
 2. **Clone your fork**
    ```bash
-   git clone https://github.com/your-username/seed-ai-platform.git
+   git clone <your-repository-url>
    ```
 3. **Create a feature branch**
    ```bash
@@ -127,7 +127,7 @@ Include:
 ## Project Structure
 
 ```
-SeedAIPlatform/
+IIOT-Based-Smart-Seed-Monitoring-System/
 ├── backend/              # FastAPI application
 │   ├── app/
 │   │   ├── api/         # API endpoints
@@ -161,4 +161,4 @@ SeedAIPlatform/
 
 By contributing, you agree that your contributions will be licensed under the MIT License.
 
-Thank you for contributing to Seed AI Platform! 🌱
+Thank you for contributing to IIOT-Based-Smart-Seed-Monitoring-System! 🌱
