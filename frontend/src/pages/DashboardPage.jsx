@@ -37,6 +37,13 @@ function getQualityLabel(score) {
   return 'Poor';
 }
 
+function getQualityRecommendation(label) {
+  if (label === 'Good') return 'Predicted quality is good. Keep standard storage and dispatch plan.';
+  if (label === 'Average') return 'Predicted quality is average. Perform moisture balancing and periodic recheck.';
+  if (label === 'Poor') return 'Predicted quality is poor. Hold batch and run confirmatory germination testing.';
+  return 'Review the captured image and re-run prediction.';
+}
+
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('sensor');
   const [historyLimit, setHistoryLimit] = useState(60);
@@ -51,6 +58,7 @@ export default function DashboardPage() {
   const [seedHistory, setSeedHistory] = useState([]);
   const [seedBusy, setSeedBusy] = useState(false);
   const [seedErr, setSeedErr] = useState('');
+  const [seedPreviewUrl, setSeedPreviewUrl] = useState('');
   const [deletingRecordId, setDeletingRecordId] = useState(null);
   const [manualSensor, setManualSensor] = useState({ temperature: 29, humidity: 58, moisture: 52 });
   const [manualPrediction, setManualPrediction] = useState({ temperature: 28, humidity: 60, moisture: 55 });
@@ -84,6 +92,15 @@ export default function DashboardPage() {
     setSeedHistory(data.records || []);
   };
 
+  const loadLatestSeedPrediction = async () => {
+    const { data } = await seedApi.latest();
+    if (!data) return;
+    setSeedResult({
+      ...data,
+      recommendation: data.recommendation || getQualityRecommendation(data.quality_label),
+    });
+  };
+
   const loadUsers = async () => {
     if (user.role !== 'admin') return;
     const { data } = await authApi.listUsers();
@@ -93,6 +110,7 @@ export default function DashboardPage() {
   useEffect(() => {
     loadSeedHistory().catch(console.error);
     loadUsers().catch(console.error);
+    loadLatestSeedPrediction().catch(console.error);
 
     const ws = new WebSocket(wsUrl());
     ws.onmessage = (evt) => {
@@ -121,8 +139,19 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    return () => {
+      if (seedPreviewUrl) URL.revokeObjectURL(seedPreviewUrl);
+    };
+  }, [seedPreviewUrl]);
+
+  useEffect(() => {
+    loadLatestSeedPrediction().catch(console.error);
     loadSensorData(historyLimit).catch(console.error);
-    const timer = setInterval(() => loadSensorData(historyLimit).catch(console.error), 10000);
+    const timer = setInterval(() => {
+      loadSensorData(historyLimit).catch(console.error);
+      loadLatestSeedPrediction().catch(console.error);
+      loadSeedHistory().catch(console.error);
+    }, 10000);
 
     return () => clearInterval(timer);
   }, [historyLimit]);
@@ -316,15 +345,18 @@ const handleSeedUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setSeedPreviewUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return URL.createObjectURL(file);
+    });
+
     setSeedBusy(true);
     setSeedErr('');
     try {
-      // Pass current sensor values for germination change prediction
-      const temperature = latest?.temperature || null;
-      const humidity = latest?.humidity || null;
-      const { data } = await seedApi.predict(file, temperature, humidity);
+      const { data } = await seedApi.predict(file);
       setSeedResult(data);
       await loadSeedHistory();
+      setSeedPreviewUrl('');
     } catch (err) {
       setSeedErr(err?.response?.data?.detail || 'Prediction failed');
     } finally {
@@ -351,9 +383,15 @@ const handleSeedUpload = async (e) => {
       await seedApi.clearHistory();
       await loadSeedHistory();
       setSeedResult(null);
+      setSeedPreviewUrl('');
     } catch (err) {
       console.error('Failed to clear history:', err);
     }
+  };
+
+  const getHistoryImageUrl = (record) => {
+    if (!record?.image_path) return null;
+    return getImageUrl(`/api/seeds/images/${record.image_path}`);
   };
 
   const handleManualPrediction = async () => {
@@ -786,7 +824,7 @@ const handleSeedUpload = async (e) => {
               <div>
                 <span className="eyebrow">Chamber 2 vision lab</span>
                 <h1>Seed Quality Analysis</h1>
-                <p>Upload a seed image to estimate germination probability, quality class, confidence, and next action.</p>
+                <p>Upload or capture a seed image to estimate germination probability, quality class, confidence, and next action.</p>
               </div>
               <div className="seed-score">
                 <strong>{seedResult ? `${seedResult.germination_probability}%` : '--'}</strong>
@@ -871,18 +909,18 @@ const handleSeedUpload = async (e) => {
 
               <div className="card upload-card">
                 <div className="card-head">
-                  <h3>Upload Seed Image</h3>
-                  <span>Germination probability and quality class</span>
+                  <h3>Seed Camera Capture</h3>
+                  <span>ESP32-CAM seed frame feed</span>
                 </div>
                 <label className="upload-box">
                   <input type="file" accept="image/*" onChange={handleSeedUpload} />
-                  <span>{seedBusy ? 'Analyzing image...' : 'Click to select image'}</span>
+                  <span>{seedBusy ? 'Analyzing seed image...' : 'Click to upload a seed frame'}</span>
                 </label>
                 {seedErr ? <p className="error-text">{seedErr}</p> : null}
 {/* Image Preview */}
-                {seedResult?.image_url && (
+                {(seedPreviewUrl || seedResult?.image_url) && (
                   <div className="image-preview">
-                    <img src={getImageUrl(seedResult.image_url)} alt="Uploaded seed" />
+                    <img src={seedPreviewUrl || getImageUrl(seedResult.image_url)} alt="Seed frame preview" />
                   </div>
                 )}
               </div>
@@ -890,14 +928,21 @@ const handleSeedUpload = async (e) => {
               <div className="card">
                 <div className="card-head">
                   <h3>Latest Prediction</h3>
+                  <span>{seedResult?.image_name || 'Waiting for camera frame'}</span>
                 </div>
                 {seedResult ? (
                   <div className="prediction-box">
+                    {seedResult.image_url ? (
+                      <div className="image-preview">
+                        <img src={getImageUrl(seedResult.image_url)} alt="Latest seed capture" />
+                      </div>
+                    ) : null}
                     <h2>{seedResult.germination_probability}%</h2>
                     <p>Quality: {seedResult.quality_label}</p>
                     <p>Confidence: {(seedResult.confidence * 100).toFixed(1)}%</p>
                     <p>Raw Class: {seedResult.raw_class}</p>
                     <p>{seedResult.recommendation}</p>
+                    {seedResult.created_at ? <p>Captured: {new Date(seedResult.created_at).toLocaleString()}</p> : null}
                     {/* Germination Change Prediction */}
                     {seedResult.germination_change !== null && seedResult.germination_change !== undefined && (
                       <div className={`germination-change ${seedResult.germination_change >= 0 ? 'positive' : 'negative'}`}>
@@ -925,6 +970,7 @@ const handleSeedUpload = async (e) => {
               </div>
               <div className="history-table">
                 <div className="row head">
+                  <span>Preview</span>
                   <span>Image</span>
                   <span>Probability</span>
                   <span>Label</span>
@@ -933,7 +979,10 @@ const handleSeedUpload = async (e) => {
                 </div>
                 {seedHistory.map((r) => (
                   <div className="row" key={`${r.id}-${r.created_at}`}>
-                    <span>{r.image_name}</span>
+                    <span className="history-thumb-cell">
+                      {getHistoryImageUrl(r) ? <img src={getHistoryImageUrl(r)} alt={r.image_name} className="history-thumb" /> : <span className="history-thumb placeholder">No image</span>}
+                    </span>
+                    <span className="history-file-name">{r.image_name}</span>
                     <span>{r.germination_probability}%</span>
                     <span>{r.quality_label}</span>
                     <span>{new Date(r.created_at).toLocaleString()}</span>

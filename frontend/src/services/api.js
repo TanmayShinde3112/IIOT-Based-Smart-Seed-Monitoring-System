@@ -38,18 +38,14 @@ export const sensorApi = {
 };
 
 export const seedApi = {
-  predict: (file, temperature = null, humidity = null) => {
+  predict: (file) => {
     const form = new FormData();
     form.append('file', file);
-    const params = new URLSearchParams();
-    if (temperature !== null) params.append('temperature', temperature);
-    if (humidity !== null) params.append('humidity', humidity);
-    const queryString = params.toString();
-    const url = queryString ? `/api/seeds/predict-seed?${queryString}` : '/api/seeds/predict-seed';
-    return api.post(url, form, {
+    return api.post('/api/seeds/predict-seed', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  latest: () => api.get('/api/seeds/latest'),
   history: () => api.get('/api/seeds/history'),
   deleteRecord: (recordId) => api.delete(`/api/seeds/history/${recordId}`),
   clearHistory: () => api.delete('/api/seeds/history'),
